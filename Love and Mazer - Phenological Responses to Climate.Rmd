@@ -1,0 +1,607 @@
+---
+title: "Love and Mazer - Phenological Responses to Climate"
+author: "Natalie Love"
+date: "1/1/2021"
+output: html_document
+---
+This code was generated using R version 4.0.3 (Bunny-Wunnies Freak Out)
+
+## Load Packages
+```{r}
+library(tidyverse) #v. 1.3.0
+library(car) #type 3 sum of squares; v. 3.0.10
+library(interactions) #for calculating region-specific slopes; v. 1.1.3
+library(rockchalk) #meanCenter; v. 1.8.144
+```
+
+## Load data
+```{r}
+strep_data <- read.csv("data/Love_herbarium_data_n743.csv")
+strep_reduced_data <- read.csv("data/Love_herbarium_reduced_dataset_n593.csv")
+```
+
+# 1. Temporal Phenological shifts
+This code is designed to detect phenological shifts (a) among all specimens and (b) region-specific phenological shifts
+
+### 1a. Phenological shift among all specimens
+```{r}
+options(contrasts=c("contr.sum", "contr.poly")) #change contrasts so the estimate of the centered variable reflects the mean effect between the two groups (temp groups)
+
+year_model_pooled <- lm(DOY ~ 
+                    PI + 
+                    year + 
+                    elev +
+                    latitude +
+                    longitude,
+                  data = strep_data)
+
+year_model_pooled_center <- meanCenter(year_model_pooled)
+summary(year_model_pooled_center)
+glance(year_model_pooled_center)
+
+year_model_pooled_ss <- Anova(year_model_pooled_center, type = 3)
+year_model_pooled_ss
+```
+
+### 1b. Region-specific phenological shifts
+```{r}
+options(contrasts=c("contr.sum", "contr.poly"))
+
+#reference is cool
+year_model <- lm(DOY ~ 
+                    PI + 
+                    year + 
+                    temp_group +
+                    year*temp_group +
+                    elev +
+                    latitude +
+                    longitude,
+                  data = strep_reduced_data)
+
+year_model_center <- meanCenter(year_model)
+summary(year_model_center)
+glance(year_model_center)
+year_model_ss <- Anova(year_model_centered, type = 3)
+year_model_ss
+  
+sim_slopes(year_model_center, pred = yearc, modx = temp_group, digits = 5)
+```
+
+# 2. Phenological sensitivity to climate
+### 2a. bFFP
+Region-specific sensitivity to the beginning of the frost-free period (day of year of onset) during the year of specimen collection
+```{r}
+options(contrasts=c("contr.sum", "contr.poly")) 
+
+sens_bFFP <- lm(DOY ~
+                     PI +
+                     temp_group +
+                     bFFP_YOC +
+                     MAP_YOC +
+                     bFFP_YOC*temp_group,
+                   data = strep_reduced_data)
+
+sens_bFFP_centered <- meanCenter(sens_bFFP)
+summary(sens_bFFP_centered)
+
+#Anova
+sens_bFFP_centered_ss <- Anova(sens_bFFP_centered, type = 3)
+sens_bFFP_centered_ss
+
+#simple slopes
+sim_slopes(sens_bFFP_centered, pred = bFFP_YOCc, modx = temp_group, digits = 5)
+
+```
+
+### 2b. NFFD
+Region-specific sensitivity to the number of frost-free days (frost-free period in days) during the year of specimen collection
+```{r}
+options(contrasts=c("contr.sum", "contr.poly"))
+
+sens_FFP <- lm(DOY ~
+                     PI +
+                     temp_group +
+                     FFP_YOC +
+                     MAP_YOC +
+                     FFP_YOC*temp_group,
+                   data = strep_reduced_data)
+
+sens_FFP_centered <- meanCenter(sens_FFP)
+summary(sens_FFP_centered)
+
+#Anova
+sens_FFP_centered_ss <- Anova(sens_FFP_centered, type = 3)
+sens_FFP_centered_ss
+
+#simple slopes
+sim_slopes(sens_FFP_centered, pred = FFP_YOCc, modx = temp_group, digits = 5)
+
+```
+
+### 2c. MAP
+Region-specific sensitivity to mean annual precipitation (mm) during the year of specimen collection
+```{r}
+options(contrasts=c("contr.sum", "contr.poly")) 
+
+sens_MAP <- lm(DOY ~
+                 PI +
+                 temp_group +
+                 MAP_YOC +
+                 MAT_YOC +
+                 MAP_YOC*temp_group,
+               data = strep_reduced_data)
+
+sens_MAP_centered <- meanCenter(sens_MAP)
+summary(sens_MAP_centered)
+
+#Anova
+sens_MAP_centered_ss <- Anova(sens_MAP_centered, type = 3)
+sens_MAP_centered_ss
+```
+
+### 2d. MAT
+Region-specific sensitivity to mean annual temperature (°C) during the year of specimen collection
+```{r}
+options(contrasts=c("contr.sum", "contr.poly"))
+
+sens_MAT <- lm(DOY ~
+                     PI +
+                     temp_group +
+                     MAT_YOC +
+                     MAP_YOC +
+                     MAT_YOC*temp_group,
+                   data = strep_reduced_data)
+
+sens_MAT_centered <- meanCenter(sens_MAT)
+summary(sens_MAT_centered)
+
+#Anova
+sens_MAT_centered_ss <- Anova(sens_MAT_centered, type = 3)
+
+#simple slopes
+sim_slopes(sens_MAT_centered, pred = MAT_YOCc, modx = temp_group, digits = 5)
+```
+
+### 2e. PAS
+Region-specific sensitivity to precipitation as snow (PAS; mm) during the year of specimen collection
+```{r}
+options(contrasts=c("contr.sum", "contr.poly")) 
+
+sens_PAS <- lm(DOY ~
+                 PI +
+                 temp_group +
+                 PAS_YOC +
+                 MAT_YOC +
+                 PAS_YOC*temp_group,
+               data = strep_reduced_data)
+
+sens_PAS_centered <- meanCenter(sens_PAS)
+summary(sens_PAS_centered)
+
+#Anova
+sens_PAS_centered_ss <- Anova(sens_PAS_centered, type = 3)
+sens_PAS_centered_ss 
+
+#simple slopes
+sim_slopes(sens_PAS_centered, pred = PAS_YOCc, modx = temp_group, digits = 5)
+```
+
+### 2f. Average spring/summer Temperature
+Sensitivity to spring/summer average temperature (°C) during the year of specimen collection
+```{r}
+options(contrasts=c("contr.sum", "contr.poly"))
+
+sens_Tave_spsm <- lm(DOY ~
+                     PI +
+                     temp_group +
+                     Tave_sp_sm_YOC +
+                     MAP_YOC +
+                     Tave_sp_sm_YOC*temp_group,
+                   data = strep_reduced_data)
+
+sens_Tave_spsm_centered <- meanCenter(sens_Tave_spsm)
+summary(sens_Tave_spsm_centered)
+
+#Anova
+sens_Tave_spsm_centered_ss <- Anova(sens_Tave_spsm_centered, type = 3)
+sens_Tave_spsm_centered_ss
+
+#simple slopes
+sim_slopes(sens_Tave_spsm_centered, pred = Tave_sp_sm_YOCc, modx = temp_group, digits = 5)
+```
+
+### 2g. Maximum spring/summer temperature
+Region-specific sensitivity to maximum spring/summer temperatures (°C) during the year of specimen collection
+```{r}
+options(contrasts=c("contr.sum", "contr.poly"))
+
+sens_Tmax_spsm <- lm(DOY ~
+                     PI +
+                     temp_group +
+                     Tmax_sp_sm_ave_YOC +
+                     MAP_YOC +
+                     Tmax_sp_sm_ave_YOC*temp_group,
+                   data = strep_reduced_data)
+
+sens_Tmax_spsm_centered <- meanCenter(sens_Tmax_spsm)
+summary(sens_Tmax_spsm_centered)
+
+#Anova
+sens_Tmax_spsm_centered_ss <- Anova(sens_Tmax_spsm_centered, type = 3)
+sens_Tmax_spsm_centered_ss
+
+#simple slopes
+sim_slopes(sens_Tmax_spsm_centered, pred = Tmax_sp_sm_ave_YOCc, modx = temp_group, digits = 5)
+
+```
+
+### 2h. Minimum spring/summer temperature
+Region-specific sensitivity to minimum spring/summer temperatures (°C) during the year of specimen collection
+```{r}
+options(contrasts=c("contr.sum", "contr.poly"))
+
+sens_Tmin_spsm <- lm(DOY ~
+                     PI +
+                     temp_group +
+                     Tmin_sp_sm_ave_YOC +
+                     MAP_YOC +
+                     Tmin_sp_sm_ave_YOC*temp_group,
+                   data = strep_reduced_data)
+
+sens_Tmin_spsm_centered <- meanCenter(sens_Tmin_spsm)
+summary(sens_Tmin_spsm_centered)
+
+#Anova
+sens_Tmin_spsm_centered_ss <- Anova(sens_Tmin_spsm_centered, type = 3)
+sens_Tmin_spsm_centered_ss
+
+#simple slopes
+sim_slopes(sens_Tmin_spsm_centered, pred = Tmin_sp_sm_ave_YOCc, modx = temp_group, digits = 5)
+```
+
+### 2i. Average winter temperature
+Region-specific sensitivity to average winter temperatures (°C) during the year of specimen collection
+```{r}
+options(contrasts=c("contr.sum", "contr.poly")) 
+
+sens_Tave_wt <- lm(DOY ~
+                     PI +
+                     temp_group +
+                     Tave_wt_YOC +
+                     MAP_YOC +
+                     Tave_wt_YOC*temp_group,
+                   data = strep_reduced_data)
+
+sens_Tave_wt_centered <- meanCenter(sens_Tave_wt)
+summary(sens_Tave_wt_centered)
+
+#Anova
+sens_Tave_wt_centered_ss <- Anova(sens_Tave_wt_centered, type = 3)
+sens_Tave_wt_centered_ss 
+
+#simple slopes
+sim_slopes(sens_Tave_wt_centered, pred = Tave_wt_YOCc, modx = temp_group, digits = 5)
+```
+
+### 2j. Maximum winter temperature
+Region-specific sensitivity to maximum winter temperatures (°C) during the year of specimen collection
+```{r}
+options(contrasts=c("contr.sum", "contr.poly"))
+
+sens_Tmax_wt <- lm(DOY ~
+                     PI +
+                     temp_group +
+                     Tmax_wt_YOC +
+                     MAP_YOC +
+                     Tmax_wt_YOC*temp_group,
+                   data = strep_reduced_data)
+
+sens_Tmax_wt_centered <- meanCenter(sens_Tmax_wt)
+summary(sens_Tmax_wt_centered)
+
+#Anova
+sens_Tmax_wt_centered_ss <- Anova(sens_Tmax_wt_centered, type = 3)
+sens_Tmax_wt_centered_ss
+
+#simple slopes
+sim_slopes(sens_Tmax_wt_centered, pred = Tmax_wt_YOCc, modx = temp_group, digits = 5)
+```
+
+### 2k. Minimum winter temperature
+Region-specific sensitivity to minimum winter temperatures (°C) during the year of specimen collection
+```{r}
+options(contrasts=c("contr.sum", "contr.poly"))
+
+sens_Tmin_wt <- lm(DOY ~
+                     PI +
+                     temp_group +
+                     Tmin_wt_YOC +
+                     MAP_YOC +
+                     Tmin_wt_YOC*temp_group,
+                   data = strep_reduced_data)
+
+sens_Tmin_wt_centered <- meanCenter(sens_Tmin_wt)
+summary(sens_Tmin_wt_centered)
+
+#Anova
+sens_Tmin_wt_centered_ss <- Anova(sens_Tmin_wt_centered, type = 3)
+sens_Tmin_wt_centered_ss
+
+#simple slopes
+sim_slopes(sens_Tmin_wt_centered, pred = Tmin_wt_YOCc, modx = temp_group, digits = 5)
+```
+
+# 3. Temporal change in climate during the collection period
+### 3a. bFFP
+Region-specific change in the beginning of the frost-free period (day of year)
+```{r}
+options(contrasts=c("contr.sum", "contr.poly"))
+
+#bFFP
+bFFP_lm <- lm(bFFP_YOC ~ 
+                      year + 
+                      temp_group +
+                      elev +
+                      latitude +
+                      longitude +
+                      MAP_YOC +
+                      year*temp_group,
+                   data = strep_reduced_data)
+
+bFFP_lm_center <- meanCenter(bFFP_lm)
+summary(bFFP_lm_center)
+
+#Anova
+bFFP_lm_center_ss <- Anova(bFFP_lm_center, type = 3)
+bFFP_lm_center_ss
+
+#simple slopes analysis
+sim_slopes(bFFP_lm_center, pred = yearc, modx = temp_group, digits = 5)
+```
+
+### 3b. NFFD
+Region-specific change in the number of frost-free days (frost-free period; days)
+```{r}
+options(contrasts=c("contr.sum", "contr.poly"))
+
+#FFP
+FFP_lm <- lm(FFP_YOC ~ 
+                      year + 
+                      temp_group +
+                      elev +
+                      latitude +
+                      longitude +
+                      MAP_YOC +
+                      year*temp_group,
+                   data = strep_reduced_data)
+
+FFP_lm_center <- meanCenter(FFP_lm)
+summary(FFP_lm_center)
+
+
+#type 3 SS
+FFP_lm_center_ss <- Anova(FFP_lm_center, type = 3)
+FFP_lm_center_ss
+
+#simple slopes analysis
+sim_slopes(FFP_lm_center, pred = yearc, modx = temp_group, digits = 5)
+```
+
+### 3c. MAP
+Region-specific changes in MAP (mm)
+```{r}
+options(contrasts=c("contr.sum", "contr.poly"))
+
+#MAP
+MAP_lm <- lm(MAP_YOC ~ 
+                      year + 
+                      temp_group +
+                      elev +
+                      latitude +
+                      longitude +
+                      MAT_YOC +
+                      year*temp_group,
+                   data = strep_reduced_data)
+
+MAP_lm_center <- meanCenter(MAP_lm)
+summary(MAP_lm_center)
+
+#type 3 SS
+MAP_lm_center_ss <- Anova(MAP_lm_center, type = 3)
+MAP_lm_center_ss 
+
+#simple slopes
+sim_slopes(MAP_lm_center, pred = yearc, modx = temp_group, digits = 5)
+```
+
+### 3d. MAT
+Region-specific change in mean annual temperature (°C) 
+```{r}
+options(contrasts=c("contr.sum", "contr.poly"))
+
+MAT_lm <- lm(MAT_YOC ~ year + 
+               temp_group + 
+               elev +
+               latitude +
+               longitude +
+               MAP_YOC +
+               year*temp_group, 
+             data = strep_reduced_data)
+
+MAT_lm_centered <- meanCenter(MAT_lm)
+summary(MAT_lm_centered)
+
+#type 3 SS
+MAT_lm_centered_ss <- Anova(MAT_lm_centered, type = 3)
+MAT_lm_centered_ss
+```
+
+### 3e. PAS
+Region-specific changes in precipitation as snow (mm)
+```{r}
+options(contrasts=c("contr.sum", "contr.poly"))
+
+#PAS
+PAS_lm <- lm(PAS_YOC ~ 
+                      year + 
+                      temp_group +
+                      latitude +
+                      longitude +
+                      elev + 
+                      MAT_YOC +
+                      year*temp_group,
+                   data = strep_reduced_data)
+
+PAS_lm_center <- meanCenter(PAS_lm)
+summary(PAS_lm_center)
+
+#type 3 SS
+PAS_lm_center_ss <- Anova(PAS_lm_center, type = 3)
+PAS_lm_center_ss
+
+#simple slopes analysis
+sim_slopes(PAS_lm_center, pred = yearc, modx = temp_group, digits = 5)
+
+```
+
+### 3f. Averate spring/summer temperature
+Region-specific changes in mean spring/summer temperature
+```{r}
+options(contrasts=c("contr.sum", "contr.poly")) 
+
+Tave_sp_sm_lm <- lm(Tave_sp_sm_YOC ~ 
+                      year + 
+                      temp_group +
+                      elev +
+                      latitude +
+                      longitude +
+                      MAP_YOC +
+                      year*temp_group,
+                   data = strep_reduced_data)
+
+Tave_sp_sm_lm_center <- meanCenter(Tave_sp_sm_lm)
+summary(Tave_sp_sm_lm_center)
+
+#type 3 SS
+Tave_sp_sm_lm_center_ss <- Anova(Tave_sp_sm_lm_center, type = 3)
+Tave_sp_sm_lm_center_ss 
+```
+### 3g. Spring/summer maximum temperatures
+Region-specific changes in spring/summer maximum temperatures
+```{r}
+options(contrasts=c("contr.sum", "contr.poly")) 
+
+Tmax_sp_sm_lm <- lm(Tmax_sp_sm_ave_YOC ~ 
+                      year + 
+                      temp_group +
+                      elev +
+                      latitude +
+                      longitude +
+                      MAP_YOC +
+                      year*temp_group,
+                   data = strep_reduced_data)
+
+Tmax_sp_sm_lm_center <- meanCenter(Tmax_sp_sm_lm)
+summary(Tmax_sp_sm_lm_center)
+
+#type 3 SS
+Tmax_sp_sm_lm_center_ss <- Anova(Tmax_sp_sm_lm_center, type = 3)
+Tmax_sp_sm_lm_center_ss
+```
+
+### 3h. Spring/summer minimum temperatures
+Region-specific changes in spring/summer minimum temperatures
+```{r}
+options(contrasts=c("contr.sum", "contr.poly")) 
+
+Tmin_sp_sm_lm <- lm(Tmin_sp_sm_ave_YOC ~ 
+                      year + 
+                      temp_group +
+                      elev +
+                      latitude +
+                      longitude +
+                      MAP_YOC +
+                      year*temp_group,
+                   data = strep_reduced_data)
+
+Tmin_sp_sm_lm_center <- meanCenter(Tmin_sp_sm_lm)
+summary(Tmin_sp_sm_lm_center)
+
+#type 3 SS
+Tmin_sp_sm_lm_center_ss <- Anova(Tmin_sp_sm_lm_center, type = 3)
+Tmin_sp_sm_lm_center_ss
+
+#simple slopes analysis
+sim_slopes(Tmin_sp_sm_lm_center, pred = yearc, modx = temp_group, digits = 5)
+
+```
+
+### 3i. Average winter temperatures
+```{r}
+options(contrasts=c("contr.sum", "contr.poly")) 
+
+Tave_wt_lm <- lm(Tave_wt_YOC ~ 
+                      year + 
+                      temp_group +
+                      elev +
+                      latitude +
+                      longitude +
+                      MAP_YOC +
+                      year*temp_group,
+                   data = strep_reduced_data)
+
+Tave_wt_lm_center <- meanCenter(Tave_wt_lm)
+summary(Tave_wt_lm_center)
+
+#type 3 SS
+Tave_wt_lm_center_ss <- Anova(Tave_wt_lm_center, type = 3)
+Tave_wt_lm_center_ss
+```
+
+### 3j. Spring/summer Maximum temperature
+Region-specific change in mean spring/summer temperature (°C)
+```{r}
+options(contrasts=c("contr.sum", "contr.poly")) 
+
+Tmax_sp_sm_lm <- lm(Tmax_sp_sm_ave_YOC ~ 
+                      year + 
+                      temp_group +
+                      elev +
+                      latitude +
+                      longitude +
+                      MAP_YOC +
+                      year*temp_group,
+                   data = strep_reduced_data)
+
+Tmax_sp_sm_lm_center <- meanCenter(Tmax_sp_sm_lm)
+summary(Tmax_sp_sm_lm_center)
+
+#type 3 SS
+Tmax_sp_sm_lm_center_ss <- Anova(Tmax_sp_sm_lm_center, type = 3)
+```
+
+###3k. Winter minimum temperature
+```{r}
+options(contrasts=c("contr.sum", "contr.poly"))
+
+Tmin_wt_lm <- lm(Tmin_wt_YOC ~ 
+                      year + 
+                      temp_group +
+                      elev +
+                      latitude +
+                      longitude +
+                      MAP_YOC +
+                      year*temp_group,
+                   data = strep_reduced_data)
+
+Tmin_wt_lm_center <- meanCenter(Tmin_wt_lm)
+summary(Tmin_wt_lm_center)
+
+#type 3 SS
+Tmin_wt_lm_center_ss <- Anova(Tmin_wt_lm_center, type = 3)
+Tmin_wt_lm_center_ss 
+
+#simple slopes analysis
+sim_slopes(Tmin_wt_lm_center, pred = yearc, modx = temp_group, digits = 5)
+```
+
